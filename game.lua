@@ -5,13 +5,16 @@ local this = {}
 
 function math.rsign() return love.math.random(2) == 2 and 1 or -1 end
 
-function collide(a1, a2)
-	if (a1 == a2) then return false end
+function collide(pobj1, pobj2)
+	if (pobj1 == pobj2) then 
+		return false 
+	end
 
-	local dx = a1.x - a2.x
-	local dy = a1.y - a2.y
-	if (math.abs(dx) < a1.w + a2.w) then
-		if (math.abs(dy) < a1.h + a2.h) then
+	local dx = pobj1.x - pobj2.x
+	local dy = pobj1.y - pobj2.y
+
+	if (math.abs(dx) < pobj1.w + pobj2.w) then
+		if (math.abs(dy) < pobj1.h + pobj2.h) then
 			return true
 		end
 	end
@@ -19,59 +22,57 @@ function collide(a1, a2)
 	return false
 end
 
-function createSprite(pType, pName, px, py)  
+function create_sprite(ptype, pname, px, py, ptable)  
     local sprite = {}
     sprite.x = px
     sprite.y = py
-    sprite.type = pType
-    sprite.kill = false
-    sprite.img = love.graphics.newImage("images/"..pName..".png")
     sprite.w = sprite.img:getWidth()
     sprite.h = sprite.img:getHeight()
+    sprite.type = ptype
+    sprite.kill = false
+    sprite.img = love.graphics.newImage("images/"..pname..".png")
     sprite.frame = 1
     sprite.tframes = {}
-    sprite.maxFrame = 1
+    sprite.maxframe = 1
 
-    table.insert(this.tsprites, sprite)
+    table.insert(ptable, sprite)
 
     return sprite
 end
 
-function createShoot(pName, px, py, pvx, pvy)
-    local shoot = createSprite('shoot', pName, px, py)
-    shoot.vx = pvx
-    shoot.vy = pvy
-    table.insert(this.tshoots, shoot)
-    return shoot 
+function create_moving_obj(ptype, pname, px, py, pvx, pvy, ptable)
+    local obj = createSprite(ptype, pname, px, py)
+    obj.vx = pvx
+    obj.vy = pvy
+    table.insert(ptable, obj)
+    return obj 
 end
 
-function createPlayer(px, py)
+function bounce(pobj, pgravity, psurface, pmaxy--[[150]], --[[2.5]]pforcefactor, --[[700]]pforceloss, psound, dt)
+	pobj.vy = (pgravity - pobj.force) * dt
+	pobj.y = pobj.y + pobj.vy
+
+	if pobj.y >= def.SCREEN_HEIGHT - pobj.h - pSurface then
+		pobj.force = pgravity * pforcefactor
+		psound:play()
+	end
+
+	if pobj.y <= def.SCREEN_HEIGHT - pobj.h and pobj.y >= pmaxy then
+		pobj.force = pobj.force - pforceloss * dt
+	end
+end
+
+function create_player(px, py, pframes_table--[[this.playerImgs]])
 	local player = createSprite('player', 'player-1', px, py)
-	player.WIDTH = player.img:getWidth()
-	player.HEIGHT = player.img:getHeight()
 	player.vy = 0
 	player.vx = 0
 	player.force = 0
 	player.speed = 4
-	player.tframes = this.playerImgs
-	player.maxFrame = 4
+	player.tframes = pframes_table
+	player.maxframe = 4
+--************************************i'm here**************************
 
-
-	player.bounce = function(pGravity, pSurface, --[[2.5]]pForceFactor, --[[700]]pForceLoss, pSound, dt)
-		player.vy = (pGravity - player.force) * dt
-		player.y = player.y + player.vy
-
-		if player.y >= def.SCREEN_HEIGHT - player.HEIGHT - pSurface then
-			player.force = pGravity * pForceFactor
-			pSound:play()
-		end
-
-		if player.y <= def.SCREEN_HEIGHT - player.HEIGHT and player.y >= 150 then
-			player.force = player.force - pForceLoss * dt
-		end
-	end
-
-	player.moveOn = function(dt)
+	player.moveon = function(dt)
 		player.vx = player.speed * (60*dt)
 		player.x = player.x + player.vx
 
