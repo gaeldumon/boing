@@ -5,7 +5,7 @@ local this = {}
 
 function math.rsign() return love.math.random(2) == 2 and 1 or -1 end
 
-function collide(pobj1, pobj2)
+function this.collide(pobj1, pobj2)
 	if (pobj1 == pobj2) then 
 		return false 
 	end
@@ -22,7 +22,7 @@ function collide(pobj1, pobj2)
 	return false
 end
 
-function create_sprite(ptype, pname, px, py)  
+function this.create_sprite(ptype, pname, px, py)  
     local sprite = {}
     sprite.x = px
     sprite.y = py
@@ -34,6 +34,7 @@ function create_sprite(ptype, pname, px, py)
     sprite.frame = 1
     sprite.tframes = {}
     sprite.maxframe = 1
+    sprite.animation_speed = 0.2
 
     sprite.isoffscreen = function()
     	if (sprite.x - sprite.w/2) > def.SCREEN_WIDTH or
@@ -52,7 +53,7 @@ function create_sprite(ptype, pname, px, py)
     return sprite
 end
 
-function transform_tile(pmap, pold_tile--[[tile type]], pnew_tile--[[tile id]], psound)
+function this.transform_tile(pmap, pold_tile--[[tile type]], pnew_tile--[[tile id]], psound)
     local c, l
     for l = 1, pmap.MAP_HEIGHT do
       	for c = 1, pmap.MAP_WIDTH do
@@ -65,7 +66,7 @@ function transform_tile(pmap, pold_tile--[[tile type]], pnew_tile--[[tile id]], 
     psound:play()
 end
 
-function create_shot(pname, px, py, pvx, pvy)
+function this.create_shot(pname, px, py, pvx, pvy)
     local shot = createSprite('shot', pname, px, py)
     shot.vx = pvx
     shot.vy = pvy
@@ -87,13 +88,15 @@ function create_shot(pname, px, py, pvx, pvy)
 				shoot.kill = true
 				target.kill = true
 			end
+		end
 	end
 
-    table.insert(this.tshots, shot)
+	table.insert(this.tshots, shot)
+
     return shot 
 end
 
-function bounce(pobj, pgravity, psurface, pmaxy--[[150]], --[[2.5]]pforcefactor, --[[700]]pforceloss, psound, dt)
+function this.bounce(pobj, pgravity, psurface, pmaxy--[[150]], --[[2.5]]pforcefactor, --[[700]]pforceloss, psound, dt)
 	pobj.vy = (pgravity - pobj.force) * dt
 	pobj.y = pobj.y + pobj.vy
 
@@ -107,7 +110,15 @@ function bounce(pobj, pgravity, psurface, pmaxy--[[150]], --[[2.5]]pforcefactor,
 	end
 end
 
-function create_player(px, py, pframes_table--[[this.playerImgs]])
+function this.change_screen(pnew_screen, pdelay, ptimer)
+	if ptimer <= pdelay then
+		ptimer = ptimer + (10*dt)
+	else
+		def.current_screen = pnew_screen
+	end
+end
+
+function this.create_player(px, py, pframes_table--[[this.playerImgs]])
 	local player = createSprite('player', 'player-1', px, py)
 	player.vy = 0
 	player.vx = 0
@@ -119,6 +130,7 @@ function create_player(px, py, pframes_table--[[this.playerImgs]])
 	player.ammo = 3
 	player.tframes = pframes_table
 	player.maxframe = 4
+	player.anim_on = false
 
 	player.moveon = function(dt)
 		player.vx = player.speed * (60*dt)
@@ -126,19 +138,14 @@ function create_player(px, py, pframes_table--[[this.playerImgs]])
 	end
 
 	player.update = function(dt, ptimer)
-
 		bounce(player, this.gravity, def.SCREEN_HEIGHT - map.TILE_HEIGHT, 150, 2.5, 700, this.sound_bounce, dt)
 
 		if player.isoffscreen() == true then
-			--refresh screen
+			new_game()
 		end
 
 		if player.lose == true then
-			if ptimer > 0 then
-				ptimer = ptimer - (10*dt)
-			else
-				def.current_screen = 'gameover'
-			end
+			this.change_screen('gameover', 10, this.timer_scorescreen)
 		end
 
 		if player.win == true then
@@ -147,10 +154,30 @@ function create_player(px, py, pframes_table--[[this.playerImgs]])
 		end
 	end
 
+	player.shoot = function()
+		if player.ammo >= 1 and player.win == false then
+			create_shot('stone', player.x, player.y, 20, 0)
+			player.ammo = player.ammo - 1
+			player.anim_on = true
+		end
+	end
+
+	player.anim = function(dt)
+		if player.anim_on == false then
+			player.frame = player.frame + player.animation_speed * (60*dt)
+			if math.floor(player.frame) > player.maxframe then
+				player.frame = 1
+				player.anim_on = false
+			else
+				player.img = player.tframes[math.floor(player.frame)]
+			end
+		end
+	end
+
 	return player
 end
 
-function create_target(py, plevel)
+function this.create_target(py, plevel)
 	local target = createSprite('target', 'target', def.SCREEN_WIDTH - map.TILE_WIDTH/2, py)
 
 	if plevel == 1 then
@@ -165,18 +192,41 @@ function create_target(py, plevel)
 	target.maxy = def.SCREEN_HEIGHT/4
 	target.miny = def.SCREEN_HEIGHT - map.TILE_HEIGHT - target.h
 
+	target.udate = function(dt)
+		target.y = target.y + (target.rand_dir * target.vy) * (60*dt)
+
+		if target.y >= target.miny then
+			target.y = target.miny
+			target.vy = 0 - target.vy
+		elseif target.y <= target.maxy then
+			target.y = target.maxy
+			target.vy = 0 - target.vy
+		end
+	end
+
 	table.insert(this.targets, target)
+		
 	return target
 end
 
-function create_explosion(px, py, pframes_table)
-	local newexplosion = createSprite('explosion', '/effects/explosion-1', px, py)
-	newexplosion.tframes = pframes_table
-	newexplosion.maxframe = 14
-	return newexplosion
+function this.create_explosion(px, py, pframes_table)
+	local explosion = createSprite('explosion', '/effects/explosion-1', px, py)
+	explosion.tframes = pframes_table
+	explosion.maxframe = 14
+
+	explosion.anim = function(dt)
+		explosion.frame = explosion.frame + explosion.animation_speed * (60*dt)
+		if math.floor(explosion.frame) > explosion.maxframe then
+			explosion.kill = true
+		else
+			explosion.img = explosion.tframes[math.floor(explosion.frame)]
+		end
+	end
+
+	return explosion
 end
 
-function new_game()
+function this.new_game()
 	local randx = love.math.random(def.SCREEN_WIDTH/8, def.SCREEN_WIDTH/4)
 	create_player(randx, 0)
 	create_target(def.SCREEN_HEIGHT/2, this.current_level)
@@ -184,14 +234,14 @@ function new_game()
 	map.load()
 end
 
-function load_imgs(pdir, ptable, pnumber)
+function this.load_imgs(pdir, ptable, pnumber)
 	local i
 	for i = 1, pnumber do
 		ptable[i] = love.graphics.newImage(pdir .. tostring(i) .. '.png')
 	end
 end
 
-function kill_sprites(ptable)
+function this.kill_sprites(ptable)
 	local n
 	for n, sprite in ipairs(ptable) do
 		if sprite.kill == false then
@@ -200,7 +250,7 @@ function kill_sprites(ptable)
 	end
 end
 
-function purge_sprites(ptable)
+function this.purge_sprites(ptable)
 	local n
 	for n, sprite in ipairs(ptable) do
 		if sprite.kill == true then
@@ -209,9 +259,24 @@ function purge_sprites(ptable)
 	end
 end
 
+function this.draw_sprites(ptable, pscale)
+	local n
+	for n, sprite in ipairs(ptable) do
+		love.graphics.draw(sprite.img, sprite.x, sprite.y, 0, pscale, pscale, sprite.w/2, sprite.h/2)
+	end
+end
+
+function this.display_infos(pmargin_left, pmargin_up)
+	love.graphics.setFont(this.font)
+	love.graphics.setColor(def.color.white)
+	love.graphics.print("STONES : " .. tostring(this.playerTries), pmargin_left, pmargin_up)
+	love.graphics.print("LEVEL " .. tostring(this.current_level), 445, pmargin_up)
+	love.graphics.print("SCORE : " .. tostring(this.playerScore), def.SCREEN_WIDTH-205, pmargin_up)
+	love.graphics.setColor(1,1,1)
+end
+
 function this.load()
 	this.gravity = 380
-	this.PLAYER_ANIM_ON = false
 	this.timer_scorescreen = 10
 
 	this.font = love.graphics.newFont('fonts/ArcadeAlternate.ttf', 35)
@@ -234,116 +299,14 @@ end
 
 function this.update(dt)
 
-	----UPDATE SHOOTS (MOVE, REMOVE, COLLISION WITH TARGET)
-	do
-		local n
-		for n, shoot in ipairs(this.tshots) do
-
-			end
-			----
-		end
-	end
-	----
-
-	----UPDATE TARGET (MOVE UP AND DOWN AT GIVEN SPEED AND RANGE)
-	do
-		local n
-		for n, target in ipairs(this.targets) do
-
-			target.y = target.y + (target.rand_dir * target.vy) * (60*dt)
-
-			if target.y >= target.minY then
-				target.y = target.minY
-				target.vy = 0 - target.vy
-			elseif target.y <= target.maxY then
-				target.y = target.maxY
-				target.vy = 0 - target.vy
-			end
-
-		end
-	end
-	----
-
-	----SPRITES ANIMATIONS (IF ANIMATED i.e FRAME > 1)
-	do
-		local n
-		for n, sprite in ipairs(this.tsprites) do
-
-			if sprite.maxFrame > 1 then
-
-				if sprite.type == 'player' then
-
-					if this.PLAYER_ANIM_ON == true then
-
-						sprite.frame = sprite.frame + 0.2 * (60*dt)
-						if math.floor(sprite.frame) > sprite.maxFrame then
-							sprite.frame = 1
-							this.PLAYER_ANIM_ON = false
-						else
-							sprite.img = sprite.tframes[math.floor(sprite.frame)]
-						end
-
-					end
-
-				elseif sprite.type == 'explosion' then
-
-					sprite.frame = sprite.frame + 0.2
-					if math.floor(sprite.frame) > sprite.maxFrame then
-						sprite.kill = true
-					else
-						sprite.img = sprite.tframes[math.floor(sprite.frame)]
-					end
-
-				end
-			end
-
-		end
-	end
-	----
-
-	purge_sprites(this.tsprites)
-
 end
 
-
-
 function this.draw()
-
-	----DRAW BACKGROUND
-	love.graphics.draw(this.bg)
-
-	----DRAW MAP
-	map.draw()
-
-	----DRAW SPRITES
-	do
-		local n
-		for n, sprite in ipairs(this.tsprites) do
-			love.graphics.draw(sprite.img, sprite.x, sprite.y, 0, 2, 2, sprite.w/2, sprite.h/2)
-		end
-	end
-	----
-
-	----DRAW INFO/DATA
-	love.graphics.setFont(this.font)
-	love.graphics.setColor(0,0,0)
-	love.graphics.print("STONES : " .. tostring(this.playerTries), 30, 15)
-	love.graphics.print("LEVEL " .. tostring(this.current_level), 445, 15)
-	love.graphics.print("SCORE : " .. tostring(this.playerScore), def.SCREEN_WIDTH-205, 15)
-	love.graphics.setColor(1,1,1)
-	----
 
 end
 
 function this.keypressed(key)
-	local n
-	for n, sprite in ipairs(this.tsprites) do
-		if key == 'space' and sprite.type == 'player' and this.playerTries >= 1 and this.playerWin == false then
-			createShoot('stone', sprite.x, sprite.y, 20, 0)
-			this.playerTries = this.playerTries - 1
-			this.PLAYER_ANIM_ON = true
-		end
-	end
+
 end
 
 return this
