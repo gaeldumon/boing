@@ -23,6 +23,19 @@ this.tileTextures[4] = love.graphics.newImage('images/tiles/4.png')
 
 this.grid = {}
 
+function this.transform_tile(pold_tile--[[tile type]], pnew_tile--[[tile id]], psound)
+    local c, l
+    for l = 1, this.MAP_HEIGHT do
+      	for c = 1, this.MAP_WIDTH do
+        	local id = this.grid[l][c]
+        	if this.tileTypes[id] == pold_tile then
+        		this.grid[l][c] = pnew_tile
+        	end
+      	end
+    end
+    psound:play()
+end
+
 function this.load()
 	this.grid = {
 		{ 0,0,0,0,0,0,0,0 },
