@@ -5,20 +5,6 @@ local this = {}
 
 this.stars = {}
 
-function this.makeBounce(pSprite, pGravity, pSurface, --[[2.5]]pForceFactor, --[[700]]pForceLoss, pSound, dt)
-	pSprite.vy = (pGravity - pSprite.force) * dt
-	pSprite.y = pSprite.y + pSprite.vy
-
-	if pSprite.y >= def.SCREEN_HEIGHT - pSprite.h*3 - pSurface then
-		pSprite.force = pGravity * pForceFactor
-		if pSound ~= nil then pSound:play() end
-	end
-
-	if pSprite.y <= def.SCREEN_HEIGHT - pSprite.h and pSprite.y >= 150 then
-		pSprite.force = pSprite.force - pForceLoss * dt
-	end
-end
-
 function this.createStar()
 	local star = {}
 	star.img = love.graphics.newImage('images/target.png')

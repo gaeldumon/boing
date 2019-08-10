@@ -35,12 +35,12 @@ function this.bounce(pobj, pgravity, psurface, pmaxy--[[150]], --[[2.5]]pforcefa
 	pobj.vy = (pgravity - pobj.force) * dt
 	pobj.y = pobj.y + pobj.vy
 
-	if pobj.y >= psurface - pobj.h then
+	if pobj.y >= psurface - pobj.h*pobj.scale then
 		pobj.force = pgravity * pforcefactor
 		psound:play()
 	end
 
-	if pobj.y <= this.SCREEN_HEIGHT - pobj.h and pobj.y >= pmaxy then
+	if pobj.y <= psurface - pobj.h*pobj.scale and pobj.y >= pmaxy then
 		pobj.force = pobj.force - pforceloss * dt
 	end
 end

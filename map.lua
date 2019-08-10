@@ -48,22 +48,18 @@ function this.load()
 end
 
 function this.draw()
-	----DRAW TILES
-	do
-	    local c, l
-	    for l = 1, this.MAP_HEIGHT do
-	      	for c = 1, this.MAP_WIDTH do
-	        	local id = this.grid[l][c]
-	        	local texQuad = this.tileTextures[id]
-	        	if texQuad ~= nil then
-	            	local x = (c - 1) * this.TILE_WIDTH
-	            	local y = (l - 1) * this.TILE_HEIGHT
-	            	love.graphics.draw(texQuad, x, y)
-	       		end
-	      	end
-	    end
+	local c, l
+    for l = 1, this.MAP_HEIGHT do
+  		for c = 1, this.MAP_WIDTH do
+    		local id = this.grid[l][c]
+    		local texQuad = this.tileTextures[id]
+    		if texQuad ~= nil then
+        		local x = (c - 1) * this.TILE_WIDTH
+        		local y = (l - 1) * this.TILE_HEIGHT
+        		love.graphics.draw(texQuad, x, y)
+   			end
+    	end
 	end
-	----
 end
 
 return this

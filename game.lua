@@ -16,6 +16,7 @@ function this.create_sprite(ptype, pname, px, py)
     sprite.tframes = {}
     sprite.maxframe = 1
     sprite.animation_speed = 0.2
+    sprite.scale = 2
 
     sprite.isoffscreen = function()
     	if (sprite.x - sprite.w/2) > def.SCREEN_WIDTH or
@@ -83,23 +84,6 @@ function this.create_player(px, py, pframes_table--[[this.playerImgs]])
 		player.x = player.x + player.vx
 	end
 
-	player.update = function(dt, ptimer)
-		def.bounce(player, this.gravity, def.SCREEN_HEIGHT - map.TILE_HEIGHT, 150, 2.5, 700, this.sound_bounce, dt)
-
-		if player.isoffscreen() == true then
-			this.new_game()
-		end
-
-		if player.lose == true then
-			def.change_screen('gameover', 10)
-		end
-
-		if player.win == true then
-			player.moveon(dt)
-			player.score = player.score + 1
-		end
-	end
-
 	player.shoot = function()
 		if player.ammo >= 1 and player.win == false and player.lose == false then
 			this.create_shot('stone', player.x, player.y, 20, 0)
@@ -120,11 +104,20 @@ function this.create_player(px, py, pframes_table--[[this.playerImgs]])
 		end
 	end
 
+	table.insert(this.tplayer, player)
+
 	return player
 end
 
+function update_player(dt)
+	local np
+	for np, p in ipairs(this.tplayer) do
+		def.bounce(p, this.gravity, def.SCREEN_HEIGHT - map.TILE_HEIGHT, 150, 2.5, 700, this.sound_bounce, dt)
+	end
+end
+
 function this.create_target(py, plevel)
-	local target = this.create_sprite('target', 'target', def.SCREEN_WIDTH - map.TILE_WIDTH/2, py)
+	local target = this.create_sprite('target', 'target', def.SCREEN_WIDTH - map.TILE_WIDTH, py)
 
 	if plevel == 1 then
 		target.vy = 2
@@ -181,12 +174,12 @@ function this.new_game()
 	map.load()
 end
 
-function this.display_infos(pmargin_left, pmargin_up)
+function this.display_infos(pobj, pmargin_left, pmargin_up)
 	love.graphics.setFont(this.font)
 	love.graphics.setColor(def.color.white)
-	love.graphics.print("STONES : " .. tostring(player.ammo), pmargin_left, pmargin_up)
+	love.graphics.print("STONES : " .. tostring(pobj.ammo), pmargin_left, pmargin_up)
 	love.graphics.print("LEVEL " .. tostring(this.current_level), 445, pmargin_up)
-	love.graphics.print("SCORE : " .. tostring(player.score), def.SCREEN_WIDTH-205, pmargin_up)
+	love.graphics.print("SCORE : " .. tostring(pobj.score), def.SCREEN_WIDTH-205, pmargin_up)
 	love.graphics.setColor(1,1,1)
 end
 
@@ -203,6 +196,7 @@ function this.load()
 	this.tsprites = {}
 	this.tshots = {}
 	this.targets = {}
+	this.tplayer = {}
 	this.player_imgs = {}
 	this.explosion_imgs = {}
 
@@ -213,41 +207,23 @@ function this.load()
 end
 
 function this.update(dt)
-	def.purge_sprites(this.targets)
-	def.purge_sprites(this.tshots)
-	def.purge_sprites(this.tsprites)
-
-	local nsp
-	for n, sp in ipairs(this.tsprites) do
-		sp.isoffscreen()
-	end
-
-	local nt
-	for nt, t in ipairs(this.targets) do
-		t.update(dt)
-		t.anim(dt)
-	end
-
-	local ns
-	for ns, s in ipairs(this.tshots) do
-		s.update(dt)
-		s.anim(dt)
-	end
-
-	player.update(dt)
-	player.anim(dt)
+	update_player(dt)
 end
 
 function this.draw()
 	love.graphics.draw(this.bg)
-	this.display_infos(30, 15)
-	def.draw_sprites(this.tsprites, 2)
+	map.draw()
+	local ns
+	for ns, s in ipairs(this.tsprites) do
+		love.graphics.draw(s.img, s.x, s.y, 0, s.scale, s.scale)
+
+		if s.type == 'player' then
+			this.display_infos(s, 30, 15)
+		end
+	end
 end
 
 function this.keypressed(key)
-	if key == 'space' then
-		player.shoot()
-	end
 end
 
 return this
