@@ -3,22 +3,6 @@ local map = require('map')
 
 local this = {}
 
-function math.rsign() return love.math.random(2) == 2 and 1 or -1 end
-
-function collide(a1, a2)
-	if (a1 == a2) then return false end
-
-	local dx = a1.x - a2.x
-	local dy = a1.y - a2.y
-	if (math.abs(dx) < a1.w + a2.w) then
-		if (math.abs(dy) < a1.h + a2.h) then
-			return true
-		end
-	end
-
-	return false
-end
-
 function createSprite(pType, pName, px, py)  
     local sprite = {}
     sprite.x = px
@@ -31,6 +15,7 @@ function createSprite(pType, pName, px, py)
     sprite.frame = 1
     sprite.tframes = {}
     sprite.maxFrame = 1
+    sprite.scale = 2
 
     table.insert(this.tsprites, sprite)
 
@@ -53,37 +38,24 @@ function createPlayer(px, py)
 	player.vx = 0
 	player.force = 0
 	player.speed = 4
-	player.tframes = this.playerImgs
+	player.tframes = this.player_imgs
 	player.maxFrame = 4
-
-
-	player.bounce = function(pGravity, pSurface, --[[2.5]]pForceFactor, --[[700]]pForceLoss, pSound, dt)
-		player.vy = (pGravity - player.force) * dt
-		player.y = player.y + player.vy
-
-		if player.y >= def.SCREEN_HEIGHT - player.HEIGHT - pSurface then
-			player.force = pGravity * pForceFactor
-			pSound:play()
-		end
-
-		if player.y <= def.SCREEN_HEIGHT - player.HEIGHT and player.y >= 150 then
-			player.force = player.force - pForceLoss * dt
-		end
-	end
-
-	player.moveOn = function(dt)
-		player.vx = player.speed * (60*dt)
-		player.x = player.x + player.vx
-
-		if player.x - player.w/2 > def.SCREEN_WIDTH then
-			player.kill = true
-			levelUp()
-			return true
-		end
-		return false
-	end
-
 	return player
+end
+
+function update_player(dt)
+	local n
+	for n, sprite in ipairs(this.tsprites) do
+		if sprite.type == 'player' and sprite.kill == false then
+			def.bounce(sprite, this.gravity, def.SCREEN_HEIGHT - map.TILE_HEIGHT, 150, 2.5, 700, this.sound_bounce, dt)
+			if this.playerWin == true then
+				def.move_x(sprite, dt)
+				if def.is_out(sprite) == true then
+					levelUp()
+				end
+			end
+		end
+	end
 end
 
 function createTarget(py, pLevel)
@@ -102,9 +74,9 @@ function createTarget(py, pLevel)
 	return target
 end
 
-function createExplosion(px, py)
+function createExplosion(px, py, ptable)
 	local newExplosion = createSprite('explosion', '/effects/explosion-1', px, py)
-	newExplosion.tframes = this.explosionImgs
+	newExplosion.tframes = ptable
 	newExplosion.maxFrame = 14
 	return newExplosion
 end
@@ -146,26 +118,18 @@ function this.load()
 	this.tshoots = {}
 	this.targets = {}
 
-	do
-		this.playerImgs = {}
-		local i
-		for i = 1, 4 do
-			this.playerImgs[i] = love.graphics.newImage('images/player-'..tostring(i)..'.png')
-		end
-	end
+	this.player_imgs = {}
+	this.explosion_imgs = {}
 
-	do
-		this.explosionImgs = {}
-		local i
-		for i = 1, 14 do
-			this.explosionImgs[i] = love.graphics.newImage('images/effects/explosion-'..i..'.png')
-		end
-	end
+	def.load_imgs('images/player-', this.player_imgs, 4)
+	def.load_imgs('images/effects/explosion-', this.explosion_imgs, 14)
 
 	newGame()
 end
 
 function this.update(dt)
+
+	update_player(dt)
 
 	if this.playerLose == true then
 		if this.timer_scoreScreen > 0 then
@@ -178,23 +142,6 @@ function this.update(dt)
 			def.current_screen = 'gameover'
 		end
 	end
-
-	----MAKE PLAYER BOUNCE AND MOVE WHEN WIN
-	local shit = true
-	do
-		local n
-		for n, sprite in ipairs(this.tsprites) do
-			if sprite.type == 'player' and sprite.kill == false then
-
-				sprite.bounce(this.gravity, map.TILE_HEIGHT, 2.5, 700, this.sound_bounce, dt)
-
-				if this.playerWin == true then
-					sprite.moveOn(dt)
-				end
-			end
-		end
-	end
-	----
 
 	----UPDATE SHOOTS (MOVE, REMOVE, COLLISION WITH TARGET)
 	do
@@ -219,14 +166,14 @@ function this.update(dt)
 			for n_target, target in ipairs(this.targets) do
 
 				----WIN STATE
-				if collide(shoot, target) == true and target.kill == false and shoot.kill == false and this.playerWin == false then
+				if def.collide(shoot, target) == true and target.kill == false and shoot.kill == false and this.playerWin == false then
 					this.playerWin = true
 
 				    --Player gets a point (1 star)
 				    this.playerScore = this.playerScore + 1
 
 					--Star explode
-					createExplosion(target.x, target.y)
+					createExplosion(target.x, target.y, this.explosion_imgs)
 
 					shoot.kill = true
 					table.remove(this.tshoots, n)
@@ -311,17 +258,7 @@ function this.update(dt)
 	end
 	----
 
-	----SPRITES PURGE
-	do
-		local n
-		for n, sprite in ipairs(this.tsprites) do
-			if sprite.kill == true then
-				table.remove(this.tsprites, n)
-			end
-		end
-	end
-	----
-
+	def.purge_sprites(this.tsprites)
 end
 
 function this.draw()
@@ -332,14 +269,7 @@ function this.draw()
 	----DRAW MAP
 	map.draw()
 
-	----DRAW SPRITES
-	do
-		local n
-		for n, sprite in ipairs(this.tsprites) do
-			love.graphics.draw(sprite.img, sprite.x, sprite.y, 0, 2, 2, sprite.w/2, sprite.h/2)
-		end
-	end
-	----
+	def.draw_sprites(this.tsprites)
 
 	----DRAW INFO/DATA
 	love.graphics.setFont(this.font)
