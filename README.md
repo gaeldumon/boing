@@ -1,4 +1,4 @@
-# Boing!Boing!
+# Boing!
 
 ### Game made for the Gamecodeur Game Jam #20 "Bounces and Collisions"
 
