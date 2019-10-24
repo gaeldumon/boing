@@ -4,8 +4,10 @@
 
 Itch page : https://hyperdestru.itch.io/boingboing
 
-In Boing!Boing! you are stuck in a world where the ground is making you bounce.
-With your slingshot shoot the stars to transform water in ice (obviously) and get out from this nightmare !
+In Boing! you are stuck in a world where the ground is making you bounce.
+Shoot stones with your slingshot and hit the stars to transform the water in ice (of course) and get out from this nightmare. But careful you only have 3 stones !
+
+Control : press SPACE to shoot.
 
 ![Screenshot](screenshots/screenshot-1.png)
 ![Screenshot](screenshots/screenshot-2.png)
