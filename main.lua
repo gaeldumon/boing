@@ -3,7 +3,6 @@
 	Coded with love by me (Hyperdestru)
 ]]
 
-io.stdout:setvbuf('no')
 love.graphics.setDefaultFilter("nearest")
 
 local def = require('define')
