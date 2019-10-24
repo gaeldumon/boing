@@ -44,7 +44,7 @@ end
 function this.update(dt)
 	if this.shit == true then
 		local n
-		for n=1, game.playerScore do
+		for n=1, game.player_score do
 			this.createStar()
 		end
 		this.shit = false
@@ -58,7 +58,7 @@ end
 function this.draw()
 	love.graphics.draw(this.bg)
 	love.graphics.setColor(0.5,0.5,0.5)
-	love.graphics.print(tostring(game.playerScore), def.SCREEN_WIDTH/2.1, def.SCREEN_HEIGHT/3, 0, 3, 3)
+	love.graphics.print(tostring(game.player_score), def.SCREEN_WIDTH/2.1, def.SCREEN_HEIGHT/3, 0, 3, 3)
 	love.graphics.setColor(1,1,1)
 
 	local n
