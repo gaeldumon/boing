@@ -9,9 +9,6 @@ Shoot stones with your slingshot and hit the stars to transform the water in ice
 
 Control : press SPACE to shoot.
 
-![Screenshot](screenshots/screenshot-1.png)
-![Screenshot](screenshots/screenshot-2.png)
-![Screenshot](screenshots/screenshot-3.png)
-
+![Capture](demo/boing.gif)
 
 
