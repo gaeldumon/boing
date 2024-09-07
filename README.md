@@ -12,6 +12,6 @@ Control: SPACE to shoot.
 I made this with Löve2D game engine (💙)
 I really enjoyed making it, everything is made from scratch (except the game engine ofc, as it is provided by Löve2D).
 
-![Capture](docs/demo/boing.gif)
+![Capture](./demo/boing.gif)
 
 
